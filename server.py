@@ -4,6 +4,9 @@ import httpx
 from typing import Any
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
+import secrets
+from urllib.parse import parse_qs
+from starlette.responses import JSONResponse
 
 # Render par public hostname. Env var RENDER_EXTERNAL_HOSTNAME Render khud set karta hai.
 PUBLIC_HOST = os.getenv("RENDER_EXTERNAL_HOSTNAME", "ootto.onrender.com")
@@ -209,7 +212,40 @@ async def health_check() -> dict[str, str]:
     return {"status": "ok", "service": "OOTTO MCP"}
 
 
+class ApiKeyMiddleware:
+    """Mohit@20150186450"""
+
+    def __init__(self, app, key: str):
+        self.app = app
+        self.key = key
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        headers = dict(scope.get("headers", []))
+        auth = headers.get(b"authorization", b"").decode()
+        if auth.lower().startswith("bearer "):
+            provided = auth[7:].strip()
+        else:
+            qs = parse_qs(scope.get("query_string", b"").decode())
+            provided = qs.get("key", [""])[0]
+
+        if not secrets.compare_digest(provided, self.key):
+            response = JSONResponse({"error": "unauthorized"}, status_code=401)
+            await response(scope, receive, send)
+            return
+
+        await self.app(scope, receive, send)
+
+
 if __name__ == "__main__":
-    mcp.settings.host = "0.0.0.0"
-    mcp.settings.port = int(os.getenv("PORT", "10000"))
-    mcp.run(transport="streamable-http")
+    import uvicorn
+
+    api_key = os.getenv("MCP_API_KEY")
+    if not api_key:
+        raise SystemExit("MCP_API_KEY environment variable set karo.")
+
+    app = ApiKeyMiddleware(mcp.streamable_http_app(), api_key)
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", "10000")))
