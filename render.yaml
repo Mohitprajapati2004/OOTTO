@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: ootto-mcp
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python server.py
+    envVars:
+      - key: META_GRAPH_VERSION
+        value: v23.0
+      - key: INSTAGRAM_ACCESS_TOKEN
+        sync: false
+      - key: INSTAGRAM_USER_ID
+        sync: false
