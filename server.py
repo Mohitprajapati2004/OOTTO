@@ -136,4 +136,6 @@ async def health_check() -> dict[str, str]:
     return {"status": "ok", "service": "OOTTO MCP"}
 
 if __name__ == "__main__":
+    mcp.settings.host = "0.0.0.0"
+    mcp.settings.port = int(os.getenv("PORT", "10000"))
     mcp.run(transport="streamable-http")
