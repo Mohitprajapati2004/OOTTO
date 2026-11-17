@@ -136,7 +136,4 @@ async def health_check() -> dict[str, str]:
     return {"status": "ok", "service": "OOTTO MCP"}
 
 if __name__ == "__main__":
-    # Render requires binding to 0.0.0.0 and its injected PORT (default 10000).
-    mcp.settings.host = "0.0.0.0"
-    mcp.settings.port = int(os.getenv("PORT", "10000"))
     mcp.run(transport="streamable-http")
